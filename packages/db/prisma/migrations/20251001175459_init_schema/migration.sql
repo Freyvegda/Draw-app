@@ -1,9 +1,9 @@
 -- CreateTable
 CREATE TABLE "public"."User" (
     "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "password" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
     "photo" TEXT NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
@@ -13,7 +13,7 @@ CREATE TABLE "public"."User" (
 CREATE TABLE "public"."Room" (
     "id" SERIAL NOT NULL,
     "slug" TEXT NOT NULL,
-    "createAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "adminId" TEXT NOT NULL,
 
     CONSTRAINT "Room_pkey" PRIMARY KEY ("id")
