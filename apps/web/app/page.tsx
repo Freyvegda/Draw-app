@@ -9,14 +9,16 @@ export default function Home() {
   const router = useRouter();
 
   return (
-    <div className={styles.page}>
-      <input type="text"  value= {roomId} placeholder="Room ID" onChange={(e)=>{
-        setRoomId(e.target.value) 
-      }}></input>
+    <div className= "flex w-screen h-screen justify-center items-center bg-red-400">
+      <div className="">
+        <input type="text" className="p-3 m-5" value= {roomId} placeholder="Room ID" onChange={(e)=>{
+          setRoomId(e.target.value) 
+        }}></input>
 
-      <button onClick={()=>{
-        router.push(`room/${roomId}`)
-      }}>Join the room</button>
+        <button className="border-2 p-2 border-black rounded-lg" onClick={()=>{
+          router.push(`room/${roomId}`)
+        }}>Join the room</button>
+      </div>
     </div>
   );
 }
