@@ -36,25 +36,38 @@ export function ChatRoomClient({
         }
     }, [socket, loading, roomId])
 
-    return <div>
-        <div>
-            {messages.map(m => <div>
-                {m.message}
-            </div>)}
+    return <div className="flex flex-col items-center justify-center w-screen h-screen bg-red-400">
+        <div className="flex flex-col items-center justify-center w-full max-w-md flex-grow overflow-y-auto p-4">
+            {chats.map((m, idx) => (
+                <div key={idx} className="bg-white rounded-lg px-4 py-2 mb-2 shadow">
+                    {m.message}
+                </div>
+            ))}
         </div>
-
-        <input type="text" value={currentMessage} onChange={e=>{
-            setCurrentMessage(e.target.value) 
-        }} placeholder="Enter message"></input>
-
-        <button onClick={()=>{
-            socket?.send(JSON.stringify({
-                type: "chat", roomId: roomId, message: currentMessage
-            })) 
-            setCurrentMessage("")
-        }}>
-            Send Message
+        <div className="flex items-center justify-center w-full max-w-md p-4 bg-red-300 rounded-lg">
+        <input
+          type="text"
+          value={currentMessage}
+          onChange={(e) => setCurrentMessage(e.target.value)}
+          placeholder="Enter message"
+          className="flex-1 p-2 border rounded-l-lg outline-none"
+        />
+        <button
+          onClick={() => {
+            socket?.send(
+              JSON.stringify({
+                type: "chat",
+                roomId: roomId,
+                message: currentMessage,
+              })
+            );
+            setCurrentMessage("");
+          }}
+          className="px-4 py-2 bg-blue-600 text-white rounded-r-lg hover:bg-blue-700"
+        >
+          Send
         </button>
+      </div>
     </div>
         
     
