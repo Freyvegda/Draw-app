@@ -5,9 +5,11 @@ import { middleware } from "./middleware";
 import { CreateRoomSchema, CreateUserSchema, SignInSchema } from "@repo/common/types";
 import { prismaClient } from "@repo/db/client";
 import bcrypt from "bcrypt"
+import cors from "cors"
 
 const app = express();
 app.use(express.json())
+app.use(cors())
 
 
 app.post('/signup', async (req, res)=>{
@@ -113,6 +115,14 @@ app.post('/room',middleware, async (req, res)=>{
 app.get('/chats/:roomId', async (req, res)=>{
     try{
         const roomId = req.params.roomId;
+
+        const room = await prismaClient.room.findUnique({
+            where :{
+                id: roomId
+            },
+            select:{ slug: true}
+        })
+
         const messages = await prismaClient.chat.findMany({
             where:{
                 roomId: roomId
@@ -123,11 +133,14 @@ app.get('/chats/:roomId', async (req, res)=>{
             take: 50
         });
     
-        res.json({messages})
+        res.json({
+            messages,
+            roomName: room?.slug || "Untitled Room", // ✅ include name safely
+        });
     }
     catch(err){
         console.error(err);
-        res.json({messages: []})
+        res.json({messages: [], roomName: "Unknown Room" })
     }
 })
 
