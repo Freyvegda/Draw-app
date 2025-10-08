@@ -1,10 +1,13 @@
 
 "use client";
 import { useRouter } from "next/navigation";
-import Image from "next/image"
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
 
 export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
   const router = useRouter();
+  const [showPassword, setShowPassword]= useState(false)
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdf6ee] relative">
@@ -60,17 +63,24 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
           </div>
 
           {/* Password field */}
-          <div className="w-full text-left">
+          <div className="w-full text-left relative">
             <label htmlFor="password" className="text-sm text-gray-600 font-bold">
               Password
             </label>
             <input
               id="password"
-              type="password"
+              type= {showPassword? "password": "text"}
               placeholder="••••••••"
               required
               className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            <button
+              type = "button"
+              onClick={()=>setShowPassword(!showPassword)}
+              className="absolute pt-6 inset-y-0 right-3 flex items-center text-black hover:text-gray-700 focus:outline-none"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
 
           {/* Continue Button */}
