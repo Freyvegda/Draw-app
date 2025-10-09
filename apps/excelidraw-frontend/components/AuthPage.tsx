@@ -1,121 +1,139 @@
-
 "use client";
+
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
-
 
 export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
   const router = useRouter();
-  const [showPassword, setShowPassword]= useState(false)
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    try {
+      const endpoint = isSignIn ? "signin" : "signup";
+      const body = isSignIn
+        ? { email, password }
+        : { email, password, name };
+
+      const res = await fetch(`http://localhost:3002/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.msg || "Failed to authenticate");
+      }
+
+      if (isSignIn) {
+        // ✅ Save JWT token
+        localStorage.setItem("token", data.msg);
+      } else {
+        // After signup, immediately sign in the user to get the token
+        const signinRes = await fetch(`http://localhost:3002/signin`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const signinData = await signinRes.json();
+        localStorage.setItem("token", signinData.msg);
+      }
+
+      // ✅ Redirect to room page
+      router.push("/room");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdf6ee] relative">
-      <div className="w-full max-w-md px-6 text-center">
-        {/* Title */}
-        <h1 className="text-3xl font-semibold text-gray-900 mb-2">
-          {isSignIn ? "Sign in to your account" : "Sign up for free"}
+      <div className="w-full max-w-md px-6 py-8 bg-white shadow-lg rounded-2xl text-center">
+        <h1 className="text-3xl font-semibold mb-6">
+          {isSignIn ? "Sign In" : "Sign Up"}
         </h1>
 
-        {/* Subtitle */}
-        {!isSignIn && (
-          <p className="text-gray-600 text-sm ">
-            We recommend using your <strong>work email</strong> — it keeps work and life separate.
-          </p>
-        )}
-
-        {/* Form */}
-        <form 
-          onSubmit={(e) => {
-            e.preventDefault();
-            console.log(isSignIn ? "Signing in..." : "Signing up...");
-          }}
-          className="flex flex-col items-center gap-4 mt-8"
-        >
-          {/* Username field for signup only */}
+        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
           {!isSignIn && (
-            <div className="w-full text-left">
-              <label htmlFor="username" className="text-sm text-gray-600 font-bold">
-                Username
-              </label>
-              <input
-                id="username"
-                type="text"
-                placeholder="Your username"
-                required
-                className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Full Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
+              required
+            />
           )}
+          <input
+            type="email"
+            placeholder="Email Address"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
+            required
+          />
 
-          {/* Email field */}
-          <div className="w-full text-left">
-            <label htmlFor="email" className="text-sm text-gray-600 font-bold">
-              Work email
-            </label>
-            <input
-              id="email"
-              type="email"
-              placeholder="name@company.com"
-              required
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          {/* Password field */}
-          <div className="w-full text-left relative">
-            <label htmlFor="password" className="text-sm text-gray-600 font-bold">
-              Password
-            </label>
-            <input
-              id="password"
-              type= {showPassword? "password": "text"}
-              placeholder="••••••••"
-              required
-              className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button
-              type = "button"
-              onClick={()=>setShowPassword(!showPassword)}
-              className="absolute pt-6 inset-y-0 right-3 flex items-center text-black hover:text-gray-700 focus:outline-none"
-            >
-              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-
-          {/* Continue Button */}
           <button
             type="submit"
-            className="w-full py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition"
+            disabled={loading}
+            className="bg-orange-500 text-white py-3 rounded-xl hover:bg-orange-600 transition disabled:opacity-50"
           >
-            {isSignIn ? "Sign in" : "Sign up"}
+            {loading
+              ? isSignIn
+                ? "Signing in..."
+                : "Signing up..."
+              : isSignIn
+              ? "Sign In"
+              : "Sign Up"}
           </button>
         </form>
 
-        {/* Switch Button using router */}
-        <button
-          onClick={() => router.push(isSignIn ? "/signup" : "/signin")}
-          className="w-full mt-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition text-md font-medium"
-        >
-          {isSignIn
-            ? "Don't have an account? Sign up"
-            : "Already have an account? Sign in"}
-        </button>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
 
-        {/* Bottom Text */}
-        {!isSignIn && (
-          <p className="text-sm text-gray-500 mt-5">
-            By signing up, you agree with our{" "}
-            <a href="#" className="underline hover:text-gray-600">
-              Terms & Conditions
-            </a>{" "}
-            and{" "}
-            <a href="#" className="underline hover:text-gray-600">
-              Privacy Policy
-            </a>
-            .
-          </p>
-        )}
+        <div className="mt-6 text-gray-600">
+          {isSignIn ? (
+            <p>
+              Don’t have an account?{" "}
+              <span
+                onClick={() => router.push("/signup")}
+                className="text-orange-600 hover:underline cursor-pointer"
+              >
+                Sign Up
+              </span>
+            </p>
+          ) : (
+            <p>
+              Already have an account?{" "}
+              <span
+                onClick={() => router.push("/signin")}
+                className="text-orange-600 hover:underline cursor-pointer"
+              >
+                Sign In
+              </span>
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

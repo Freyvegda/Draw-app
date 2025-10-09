@@ -79,38 +79,64 @@ app.post('/signin', async (req, res)=>{
     }
 })
 
-app.post('/room',middleware, async (req, res)=>{
-    const parsedData = CreateRoomSchema.safeParse(req.body);
-    if(!parsedData){
-        return res.json({
-            msg: "Enter valid Room ID"
-        })
+app.post("/room", middleware, async (req, res) => {
+  const parsedData = CreateRoomSchema.safeParse(req.body);
+
+  if (!parsedData.success) {
+    return res.status(400).json({ msg: "Invalid room data" });
+  }
+
+  const userId = req.userId;
+
+  if (!userId) {
+    return res.status(401).json({ msg: "Unauthorized" });
+  }
+
+  try {
+    if (!parsedData.data?.roomName) {
+      return res.status(400).json({ msg: "Room name is required" });
     }
-    const userId = req.userId;
-    try{
-        if (!parsedData.data?.roomName) {
-            return res.status(400).json({ msg: "Room name is required" });
-        }
-        if (!userId) {
-            return res.status(400).json({ msg: "User ID is required" });
-        }
-        const room = await prismaClient.room.create({
-            data: {
-                slug: parsedData.data.roomName,
-                adminId: userId
-            }
-        })
-        res.json({
-            roomId : room.id
-        })
+
+    // Check if room already exists
+    const existingRoom = await prismaClient.room.findFirst({
+      where: { slug: parsedData.data.roomName },
+    });
+
+    if (existingRoom) {
+      return res.status(409).json({ msg: "Room already exists" });
     }
-    catch(err){
-        console.error(err);
-        res.status(411).json({
-            msg:"Room already exists"
-        })
-    }
-})
+
+    const room = await prismaClient.room.create({
+      data: { slug: parsedData.data.roomName, adminId: userId },
+    });
+
+    return res.json({ roomId: room.id });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+});
+
+app.post("/room/create", middleware, async (req, res) => {
+  const { roomName } = req.body;
+  const userId = req.userId
+  
+  if (!roomName) return res.status(400).json({ msg: "Room name required" });
+  if (!userId) return res.status(401).json({ msg: "User not authorized" });
+
+  try {
+    const room = await prismaClient.room.create({
+      data: {
+        slug: roomName,
+        adminId: userId,
+      },
+    });
+    res.json({ roomId: room.id });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ msg: "Room already exists or creation failed" });
+  }
+});
 
 app.get('/chats/:roomId', async (req, res)=>{
     try{
@@ -144,14 +170,24 @@ app.get('/chats/:roomId', async (req, res)=>{
     }
 })
 
-app.get('/room/:slug', async (req, res)=>{
+// GET /room/:slug
+app.get("/room/:slug", middleware, async (req, res) => {
+  try {
     const slug = req.params.slug;
-    const room = await prismaClient.room.findFirst({
-        where:{
-            slug
-        }
-    })
-    return res.json({room})
-})
+
+    const room = await prismaClient.room.findFirst({ where: { slug } });
+
+    if (!room) {
+      // 🔹 Must return JSON + 404
+      return res.status(404).json({ msg: "Room not found" });
+    }
+
+    return res.json({ room: { id: room.id, slug: room.slug } });
+  } catch (err) {
+    console.error("Failed to fetch room:", err);
+    return res.status(500).json({ msg: "Server error" });
+  }
+});
+
 
 app.listen(3002)

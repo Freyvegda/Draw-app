@@ -1,22 +1,56 @@
 "use client";
 
 import { WS_URL } from "@/config";
-import { useEffect, useState } from "react";
-import Canvas from "./Canvas"; 
+import { useEffect, useState, useRef } from "react";
+import Canvas from "./Canvas";
 
-export function RoomCanvas({ roomId }: { roomId: string }) {
+interface RoomCanvasProps {
+  roomId: string;
+  token: string; // Pass JWT token as a prop
+}
+
+export function RoomCanvas({ roomId, token }: RoomCanvasProps) {
   const [socket, setSocket] = useState<WebSocket | null>(null);
+  const reconnectRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(`${WS_URL}?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI4YzE2Mzc0Mi0xNjMwLTRjODUtOGYxNS1mZjkzMDIyOGRlODMiLCJpYXQiOjE3NTkzODcxNDV9.SGauTDCAhHeCxchTHRAdzTTyDjMzhmy72dawLdr8b6I`);
+    if (!token) return;
 
-    ws.onopen = () => {
-      setSocket(ws);
-      ws.send(JSON.stringify({ type: "join_room", roomId }));
+    let ws: WebSocket;
+
+    const connect = () => {
+      ws = new WebSocket(`${WS_URL}?token=${token}`);
+
+      ws.onopen = () => {
+        console.log("WebSocket connected");
+        setSocket(ws);
+        ws.send(JSON.stringify({ type: "join_room", roomId }));
+      };
+
+      ws.onclose = (e) => {
+        console.log("WebSocket closed, retrying in 2s...", e.reason);
+        setSocket(null);
+        // Try reconnecting after 2 seconds
+        reconnectRef.current = setTimeout(connect, 2000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        ws.close();
+      };
     };
 
-    return () => ws.close();
-  }, [roomId]);
+    connect();
+
+    return () => {
+      if (reconnectRef.current) clearTimeout(reconnectRef.current);
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onclose = null;
+      ws.onerror = null;
+      ws.close();
+    };
+  }, [roomId, token]);
 
   if (!socket) {
     return <div>Connecting to server...</div>;
