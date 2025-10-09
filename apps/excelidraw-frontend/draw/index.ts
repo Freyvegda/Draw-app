@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+import { HTTP_BACKEND } from "@/config";
 import axios from "axios";
-import { HTTP_BACKEND } from "../config";
 
 type Shape =
   | {
@@ -14,148 +15,167 @@ type Shape =
       centerX: number;
       centerY: number;
       radius: number;
+    }
+  | {
+      type: "pencil";
+      startX: number;
+      startY: number;
+      endX: number;
+      endY: number;
     };
 
-export async function InitDraw(
-  canvas: HTMLCanvasElement,
-  roomId: string,
-  socket: WebSocket
-) {
-  const context = canvas.getContext("2d");
-  if (!context) return;
+// 👇 main initDraw function with dark mode parameter
+export async function initDraw(
+    canvas: HTMLCanvasElement,
+    roomId: string,
+    socket: WebSocket,
+    darkMode: boolean
+    ) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  // 🧠 Fetch existing shapes first
-  const { shapes: existingShapes, roomName } = await getExistingShapes(roomId);
+    const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
+    const {messages, roomName} = res.data; 
 
-  // 🖌️ Draw them immediately once fetched
-  clearCanvas(existingShapes, canvas, context);
 
-  // 🧩 Set up websocket listener AFTER initial draw
-  socket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
 
-    if (message.type === "chat") {
-      // The server sends { shape: {...} } inside message.message
-      const parsed = JSON.parse(message.message);
-      const shape = parsed.shape;
+    const existingShapes: Shape[] = await getExistingShapes(roomId);
 
-      if (shape) {
+    ctx.fillStyle = darkMode ? "#000" : "#fdf6ee";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // initial render
+    clearCanvas(existingShapes, canvas, ctx, darkMode);
+
+        
+    // websocket listener
+    socket.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        if (message.type === "chat") {
+        const parsedShape = JSON.parse(message.message);
+        existingShapes.push(parsedShape.shape);
+        clearCanvas(existingShapes, canvas, ctx, darkMode);
+        }
+    };
+
+    let clicked = false;
+    let startX = 0;
+    let startY = 0;
+
+    // mouse down
+    canvas.addEventListener("mousedown", (e) => {
+        clicked = true;
+        startX = e.clientX - canvas.getBoundingClientRect().left;
+        startY = e.clientY - canvas.getBoundingClientRect().top;
+    });
+
+    // mouse up (finalize shape)
+    canvas.addEventListener("mouseup", (e) => {
+        if (!clicked) return;
+        clicked = false;
+
+        const endX = e.clientX - canvas.getBoundingClientRect().left;
+        const endY = e.clientY - canvas.getBoundingClientRect().top;
+        const width = endX - startX;
+        const height = endY - startY;
+
+        // @ts-ignore
+        const selectedTool = window.selectedTool;
+        let shape: Shape | null = null;
+
+        if (selectedTool === "rect") {
+        shape = {
+            type: "rect",
+            x: startX,
+            y: startY,
+            width,
+            height,
+        };
+        } else if (selectedTool === "circle") {
+        const radius = Math.abs(Math.max(width, height) / 2);
+        shape = {
+            type: "circle",
+            centerX: startX + radius,
+            centerY: startY + radius,
+            radius,
+        };
+        }
+
+        if (!shape) return;
+
         existingShapes.push(shape);
-        clearCanvas(existingShapes, canvas, context);
-      }
-    }
-  };
+        clearCanvas(existingShapes, canvas, ctx, darkMode);
 
-  // 🖱️ Mouse event setup
-  let clicked = false;
-  let startX = 0;
-  let startY = 0;
+        socket.send(
+        JSON.stringify({
+            type: "chat",
+            message: JSON.stringify({ shape }),
+            roomId,
+        })
+        );
+    });
 
-  canvas.addEventListener("mousedown", (e) => {
-    clicked = true;
-    startX = e.clientX - canvas.getBoundingClientRect().left;
-    startY = e.clientY - canvas.getBoundingClientRect().top;
-  });
+    // mouse move (preview while dragging)
+    canvas.addEventListener("mousemove", (e) => {
+        if (!clicked) return;
 
-  canvas.addEventListener("mouseup", (e) => {
-    if (!clicked) return;
-    clicked = false;
+        const endX = e.clientX - canvas.getBoundingClientRect().left;
+        const endY = e.clientY - canvas.getBoundingClientRect().top;
+        const width = endX - startX;
+        const height = endY - startY;
 
-    const endX = e.clientX - canvas.getBoundingClientRect().left;
-    const endY = e.clientY - canvas.getBoundingClientRect().top;
-    const width = endX - startX;
-    const height = endY - startY;
+        clearCanvas(existingShapes, canvas, ctx, darkMode);
 
-    const selectedTool = "circle";
-    let shape: Shape | null = null;
+        ctx.strokeStyle = darkMode ? "#ffffff" : "#000000";
+        // @ts-ignore
+        const selectedTool = window.selectedTool;
 
-    if (selectedTool === "rect") {
-      shape = {
-        type: "rect",
-        x: startX,
-        y: startY,
-        width,
-        height,
-      };
-    } else if (selectedTool === "circle") {
-      const radius = Math.abs(Math.max(width, height) / 2);
-      shape = {
-        type: "circle",
-        centerX: startX + radius,
-        centerY: startY + radius,
-        radius,
-      };
-    }
-
-    if (!shape) return;
-
-    existingShapes.push(shape);
-    clearCanvas(existingShapes, canvas, context);
-
-    socket.send(
-      JSON.stringify({
-        type: "chat",
-        message: JSON.stringify({ shape }),
-        roomId,
-      })
-    );
-  });
-
-  canvas.addEventListener("mousemove", (e) => {
-    if (!clicked) return;
-
-    const endX = e.clientX - canvas.getBoundingClientRect().left;
-    const endY = e.clientY - canvas.getBoundingClientRect().top;
-    const width = endX - startX;
-    const height = endY - startY;
-
-    clearCanvas(existingShapes, canvas, context);
-    context.strokeStyle = "rgba(255,255,255)";
-
-    const selectedTool = "circle";
-    if (selectedTool === "rect") {
-      context.strokeRect(startX, startY, width, height);
-    } else if (selectedTool === "circle") {
-      const radius = Math.abs(Math.max(width, height) / 2);
-      const centerX = startX + radius;
-      const centerY = startY + radius;
-      context.beginPath();
-      context.arc(centerX, centerY, radius, 0, Math.PI * 2);
-      context.stroke();
-      context.closePath();
-    }
-  });
-
-  return roomName;
+        if (selectedTool === "rect") {
+        ctx.strokeRect(startX, startY, width, height);
+        } else if (selectedTool === "circle") {
+        const radius = Math.abs(Math.max(width, height) / 2);
+        const centerX = startX + radius;
+        const centerY = startY + radius;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.closePath();
+        }
+    });
+    return roomName;
 }
 
+
+// 🎨 clears + redraws all shapes
 function clearCanvas(
   existingShapes: Shape[],
   canvas: HTMLCanvasElement,
-  context: CanvasRenderingContext2D
+  ctx: CanvasRenderingContext2D,
+  darkMode: boolean
 ) {
-  // 🧼 Clear background
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "rgba(0,0,0)";
-  context.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = darkMode ? "#000000" : "#fdf6ee";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 🖌️ Redraw all shapes
+  ctx.strokeStyle = darkMode ? "#ffffff" : "#000000";
   existingShapes.forEach((shape) => {
-    context.strokeStyle = "rgba(255,255,255)";
     if (shape.type === "rect") {
-      context.strokeRect(shape.x, shape.y, shape.width, shape.height);
+      ctx.strokeRect(shape.x, shape.y, shape.width, shape.height);
     } else if (shape.type === "circle") {
-      context.beginPath();
-      context.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
-      context.stroke();
-      context.closePath();
+      ctx.beginPath();
+      ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.closePath();
     }
   });
+
+
 }
 
+// 📦 get shapes from backend
 async function getExistingShapes(roomId: string) {
   const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
-  const { messages, roomName } = res.data;
+  const messages = res.data.messages;
 
   const shapes = messages
     .map((x: { message: string }) => {
@@ -166,7 +186,7 @@ async function getExistingShapes(roomId: string) {
         return null;
       }
     })
-    .filter(Boolean); // remove invalid entries
+    .filter(Boolean);
 
-  return { shapes, roomName };
+  return shapes;
 }
