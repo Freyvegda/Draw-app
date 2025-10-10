@@ -1,5 +1,6 @@
 "use client";
 
+import { HTTP_BACKEND } from "@/config";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -22,7 +23,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
         ? { email, password }
         : { email, password, name };
 
-      const res = await fetch(`http://localhost:3002/${endpoint}`, {
+      const res = await fetch(`${HTTP_BACKEND}/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -39,7 +40,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
         localStorage.setItem("token", data.msg);
       } else {
         // After signup, immediately sign in the user to get the token
-        const signinRes = await fetch(`http://localhost:3002/signin`, {
+        const signinRes = await fetch(`${HTTP_BACKEND}/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password }),
