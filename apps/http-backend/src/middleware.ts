@@ -13,7 +13,7 @@ declare global {
 
 export function middleware(req: Request, res: Response,next: NextFunction){
     const token = req.headers["authorization"] ?? "";
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET!);
 
     if (decoded && typeof decoded === "object" && "userId" in decoded) {
         req.userId = (decoded as jwt.JwtPayload).userId as string;
