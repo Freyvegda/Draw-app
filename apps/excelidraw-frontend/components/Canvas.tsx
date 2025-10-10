@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { initDraw } from "@/draw"; // ← ensure this matches your export name
+import { Game } from "@/draw/game"; // ← updated import
 import IconButton from "./IconButton";
-import { Circle, Pencil, RectangleHorizontal, Moon, Sun } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Moon, Sun, LogOut, DoorOpen } from "lucide-react";
+import { Tool, Toolbar } from "./ToolBar";
 
-type Shape = "circle" | "rect" | "pencil";
 
 export default function Canvas({
   roomId,
@@ -16,8 +17,10 @@ export default function Canvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [roomName, setRoomName] = useState<string>("");
-  const [selectedTool, setSelectedTool] = useState<Shape>("circle");
+  const [selectedTool, setSelectedTool] = useState<Tool>("circle");
   const [darkMode, setDarkMode] = useState(true);
+  const gameRef = useRef<Game | null>(null);
+  const router = useRouter();
 
   // Load dark mode from localStorage
   useEffect(() => {
@@ -32,21 +35,53 @@ export default function Canvas({
     localStorage.setItem("darkmode", darkMode.toString());
   }, [darkMode]);
 
-  // Store the selected tool globally for initDraw to access
+  useEffect(()=>{
+
+  })
+
+
+  // Initialize Game instance
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    window.selectedTool = selectedTool;
+    if (!canvasRef.current) return;
+
+    const game = new Game(canvasRef.current, roomId, socket, darkMode);
+    gameRef.current = game;
+
+    game.init().then((name) => setRoomName(name.toUpperCase()));
+
+    return () => {
+      game.destroy();
+      gameRef.current = null;
+    };
+  }, [canvasRef, roomId, socket, darkMode]);
+
+
+
+  // Update selected tool dynamically
+  useEffect(() => {
+    if (gameRef.current) {
+      gameRef.current.setTool(selectedTool);
+    }
   }, [selectedTool]);
 
-  // Initialize drawing logic
-  useEffect(() => {
-    if (canvasRef.current) {
-      initDraw(canvasRef.current, roomId, socket, darkMode).then((name)=>{
-        setRoomName(name);
-      })
+  const handleLogout=()=>{
+    try{
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      socket.close();
+
+      router.push("/signin");
     }
-  }, [canvasRef, roomId, socket, darkMode]);
+    catch(err){
+      console.error("Error logging out", err);
+    }
+  }
+
+  const handleJoiningAnotherRoom= ()=>{
+    router.push("/room")
+  }
+
 
   return (
     <div
@@ -56,14 +91,14 @@ export default function Canvas({
     >
       {/* Room title */}
       <h2
-        className={`text-2xl font-semibold mb-4 z-20 ${
+        className={`text-2xl font-semibold mb-4 z-20 mt-3 ${
           darkMode ? "text-white" : "text-black"
         }`}
       >
         {roomName || "Loading room..."}
       </h2>
 
-      {/* Drawing canvas */}
+      {/* Canvas */}
       <canvas
         ref={canvasRef}
         width={window.innerWidth}
@@ -71,45 +106,23 @@ export default function Canvas({
         className="absolute top-0 left-0"
       />
 
-      {/* Toolbar (shapes) */}
-      <Topbar selectedTool={selectedTool} setSelectedTool={setSelectedTool} />
+      {/* Toolbar */}
+      <Toolbar selectedTool={selectedTool} setSelectedTool={setSelectedTool} />
 
       {/* Dark mode toggle */}
       <Darkmode darkMode={darkMode} setDarkMode={setDarkMode} />
+
+      {/*Logout button */}  
+      <LogoutButton onLogout={handleLogout} />
+      
+      {/*Logout button */}  
+      <JoinAnotherRoom onJoinAnotherRoom={handleJoiningAnotherRoom}/>
     </div>
   );
 }
 
-function Topbar({
-  selectedTool,
-  setSelectedTool,
-}: {
-  selectedTool: Shape;
-  setSelectedTool: (s: Shape) => void;
-}) {
-  return (
-    <div className="fixed top-5 left-5 z-30">
-      <div className="flex flex-col gap-2">
-        <IconButton
-          activated={selectedTool === "pencil"}
-          icon={<Pencil />}
-          onClick={() => setSelectedTool("pencil")}
-        />
-        <IconButton
-          activated={selectedTool === "rect"}
-          icon={<RectangleHorizontal />}
-          onClick={() => setSelectedTool("rect")}
-        />
-        <IconButton
-          activated={selectedTool === "circle"}
-          icon={<Circle />}
-          onClick={() => setSelectedTool("circle")}
-        />
-      </div>
-    </div>
-  );
-}
 
+// --- Dark mode toggle ---
 export function Darkmode({
   darkMode,
   setDarkMode,
@@ -123,7 +136,37 @@ export function Darkmode({
         activated={darkMode}
         icon={darkMode ? <Sun color="yellow" /> : <Moon />}
         onClick={() => setDarkMode(!darkMode)}
+        title="Darkmode"
       />
     </div>
   );
+}
+
+
+//logout button
+function LogoutButton({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="fixed bottom-5 right-5 z-30">
+      <IconButton
+        activated={false}
+        icon={<LogOut />}
+        onClick={onLogout}
+        title="Logout"
+      />
+    </div>
+  );
+}
+
+
+function JoinAnotherRoom({onJoinAnotherRoom}: {onJoinAnotherRoom: ()=>void}){
+  return <div className="top-5 right-20 fixed z-30">
+    <button >
+      <IconButton
+        activated = {false}
+        icon = {<DoorOpen/>}
+        onClick = {onJoinAnotherRoom}
+        title="Join Another Room"
+      />
+    </button>
+  </div>
 }

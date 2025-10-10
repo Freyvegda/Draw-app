@@ -3,16 +3,27 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { prismaClient } from "@repo/db/client";
 
+// --- Setup ---
 const wss = new WebSocketServer({ port: 8080 });
+console.log("✅ WebSocket server running on ws://localhost:8080");
 
+// --- Types ---
 type User = {
   ws: WebSocket;
   rooms: string[];
   userId: string;
 };
 
+type IncomingMessage = {
+  type: "join_room" | "leave_room" | "chat" | "delete";
+  roomId: string;
+  message?: string;
+};
+
+// --- In-memory store of connected users ---
 const users: User[] = [];
 
+// --- Helper: JWT Verification ---
 function checkUser(token: string): string | null {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { userId: string };
@@ -23,6 +34,7 @@ function checkUser(token: string): string | null {
   }
 }
 
+// --- WebSocket Handlers ---
 wss.on("connection", (ws, request) => {
   ws.on("error", console.error);
 
@@ -37,6 +49,7 @@ wss.on("connection", (ws, request) => {
   const userId = checkUser(token);
 
   if (!userId) {
+    console.warn(" Unauthorized connection attempt");
     ws.close();
     return;
   }
@@ -44,48 +57,74 @@ wss.on("connection", (ws, request) => {
   const user: User = { ws, rooms: [], userId };
   users.push(user);
 
-  console.log(`User connected: ${userId}`);
+  console.log(`User connected: ${userId} (${users.length} total)`);
 
-  ws.on("message", async (data) => {
+  // --- Handle incoming messages ---
+  ws.on("message", async (rawData) => {
     try {
-      let parsedData: any = typeof data === "string" ? JSON.parse(data) : JSON.parse(data.toString());
+      const parsedData: IncomingMessage =
+        typeof rawData === "string" ? JSON.parse(rawData) : JSON.parse(rawData.toString());
 
-      // JOIN ROOM
-      if (parsedData.type === "join_room") {
-        if (!user.rooms.includes(parsedData.roomId)) {
-          user.rooms.push(parsedData.roomId);
+      const { type, roomId, message } = parsedData;
+
+      switch (type) {
+        // --- JOIN ROOM ---
+        case "join_room": {
+          if (!user.rooms.includes(roomId)) user.rooms.push(roomId);
+          console.log(`User ${user.userId} joined room ${roomId}`);
+          break;
         }
-        console.log(`User ${user.userId} joined room ${parsedData.roomId}`);
-      }
 
-      // LEAVE ROOM
-      if (parsedData.type === "leave_room") {
-        user.rooms = user.rooms.filter((r) => r !== parsedData.roomId);
-        console.log(`User ${user.userId} left room ${parsedData.roomId}`);
-      }
+        // --- LEAVE ROOM ---
+        case "leave_room": {
+          user.rooms = user.rooms.filter((r) => r !== roomId);
+          console.log(`User ${user.userId} left room ${roomId}`);
+          break;
+        }
 
-      // CHAT
-      if (parsedData.type === "chat") {
-        const roomId = parsedData.roomId.toString();
-        const message = parsedData.message;
+        // --- CHAT / DRAW / MOVE SHAPE ---
+        case "chat": {
+          if (!message) return;
 
-        const chat = await prismaClient.chat.create({
-          data: { userId, roomId, message },
-        });
+          // Save to DB
+          await prismaClient.chat.create({
+            data: { userId, roomId, message, type: "chat" },
+          });
 
-        // Broadcast to all users in the same room
-        users.forEach((u) => {
-          if (u.rooms.includes(roomId)) {
-            u.ws.send(
-              JSON.stringify({
-                type: "chat",
-                message,
-                roomId,
-                userId,
-              })
-            );
-          }
-        });
+          // Broadcast to all users in the same room
+          broadcastToRoom(roomId, {
+            type: "chat",
+            message,
+            roomId,
+            userId,
+          });
+
+          break;
+        }
+
+        // --- DELETE SHAPE ---
+        case "delete": {
+          if (!message) return;
+
+          // Persist deletion in DB (for replay consistency)
+          await prismaClient.chat.create({
+            data: { userId, roomId, message, type: "delete" },
+          });
+
+          // Broadcast deletion event
+          broadcastToRoom(roomId, {
+            type: "delete",
+            message,
+            roomId,
+            userId,
+          });
+
+          console.log(`Shape deleted by ${userId} in room ${roomId}`);
+          break;
+        }
+
+        default:
+          console.warn("Unknown message type:", type);
       }
     } catch (err) {
       console.error("Failed to handle message:", err);
@@ -93,10 +132,19 @@ wss.on("connection", (ws, request) => {
     }
   });
 
+  // --- Handle disconnect ---
   ws.on("close", () => {
     console.log(`User disconnected: ${userId}`);
-    // Remove user from users array
     const index = users.findIndex((u) => u.ws === ws);
     if (index !== -1) users.splice(index, 1);
   });
 });
+
+// --- Helper: Broadcast to all users in a given room ---
+function broadcastToRoom(roomId: string, payload: Record<string, any>) {
+  users.forEach((u) => {
+    if (u.rooms.includes(roomId) && u.ws.readyState === WebSocket.OPEN) {
+      u.ws.send(JSON.stringify(payload));
+    }
+  });
+}

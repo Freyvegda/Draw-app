@@ -109,7 +109,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
           </button>
         </form>
 
-        {error && <p className="text-red-500 mt-4">{error}</p>}
+        {error && <p className="text-red-500 mt-4 text-md">{error}</p>}
 
         <div className="mt-6 text-gray-600">
           {isSignIn ? (

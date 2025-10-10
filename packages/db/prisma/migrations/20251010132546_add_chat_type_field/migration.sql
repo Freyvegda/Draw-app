@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "public"."Chat" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "type" TEXT NOT NULL DEFAULT 'chat';

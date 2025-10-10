@@ -1,30 +1,31 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { HTTP_BACKEND } from "@/config";
 import axios from "axios";
+import { getExistingShapes } from "./http";
 
 type Shape =
-  | {
-      type: "rect";
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-    }
-  | {
-      type: "circle";
-      centerX: number;
-      centerY: number;
-      radius: number;
-    }
-  | {
-      type: "pencil";
-      startX: number;
-      startY: number;
-      endX: number;
-      endY: number;
-    };
+  {
+    type: "rect";
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }
+| {
+    type: "circle";
+    centerX: number;
+    centerY: number;
+    radius: number;
+  }
+| {
+    type: "pencil";
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+  };
 
-// 👇 main initDraw function with dark mode parameter
+// main initDraw function with dark mode parameter
 export async function initDraw(
     canvas: HTMLCanvasElement,
     roomId: string,
@@ -37,13 +38,11 @@ export async function initDraw(
     const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
     const {messages, roomName} = res.data; 
 
-
-
     const existingShapes: Shape[] = await getExistingShapes(roomId);
 
     ctx.fillStyle = darkMode ? "#000" : "#fdf6ee";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // initial render
     clearCanvas(existingShapes, canvas, ctx, darkMode);
 
@@ -146,7 +145,7 @@ export async function initDraw(
 }
 
 
-// 🎨 clears + redraws all shapes
+// clears + redraws all shapes
 function clearCanvas(
   existingShapes: Shape[],
   canvas: HTMLCanvasElement,
@@ -168,25 +167,6 @@ function clearCanvas(
       ctx.closePath();
     }
   });
-
-
 }
 
-// 📦 get shapes from backend
-async function getExistingShapes(roomId: string) {
-  const res = await axios.get(`${HTTP_BACKEND}/chats/${roomId}`);
-  const messages = res.data.messages;
 
-  const shapes = messages
-    .map((x: { message: string }) => {
-      try {
-        const messageData = JSON.parse(x.message);
-        return messageData.shape;
-      } catch {
-        return null;
-      }
-    })
-    .filter(Boolean);
-
-  return shapes;
-}
