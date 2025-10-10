@@ -1,2 +1,2 @@
-export const HTTP_BACKEND = "http://localhost:3002"
+export const HTTP_BACKEND = "https://draw-app-fgfu.onrender.com/"
 export const WS_URL = "ws://localhost:8080";
