@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
 import { prismaClient } from "@repo/db/client";
 
+
 // --- Setup ---
 const wss = new WebSocketServer({ port: 8080 });
 console.log("✅ WebSocket server running on ws://localhost:8080");
@@ -26,7 +27,7 @@ const users: User[] = [];
 // --- Helper: JWT Verification ---
 function checkUser(token: string): string | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET!) as JwtPayload & { userId: string };
     return decoded?.userId || null;
   } catch (err) {
     console.error("JWT verification failed:", err);
