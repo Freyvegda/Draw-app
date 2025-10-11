@@ -16,7 +16,6 @@ export default function JoinRoomPage() {
   const [token, setToken] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
 
-  // -----------------------------
   // On mount: load token from localStorage
   useEffect(() => {
     setIsClient(true);
@@ -34,7 +33,7 @@ export default function JoinRoomPage() {
     );
   }
 
-  // -----------------------------
+
   // JOIN ROOM
   async function handleJoinRoom() {
     setLoading(true);
@@ -78,7 +77,7 @@ export default function JoinRoomPage() {
     }
   }
 
-  // -----------------------------
+
   // CREATE ROOM
   async function handleCreateRoom() {
     setLoading(true);
@@ -116,7 +115,7 @@ export default function JoinRoomPage() {
     }
   }
 
-  // -----------------------------
+ 
   return (
     <div className="min-h-screen bg-[#fdf6ee] flex items-center justify-center">
       <div className="bg-white shadow-md rounded-2xl p-8 w-full max-w-md text-center">
