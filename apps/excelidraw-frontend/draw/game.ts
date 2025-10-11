@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import axios from "axios";
 import { HTTP_BACKEND } from "@/config";
 import { Tool } from "@/components/ToolBar";
@@ -6,7 +5,7 @@ import { Tool } from "@/components/ToolBar";
 type Shape =
   | { type: "rect"; x: number; y: number; width: number; height: number }
   | { type: "circle"; centerX: number; centerY: number; radius: number }
-  | { type: "pencil"; startX: number; startY: number; endX: number; endY: number }
+  | { type: "arrow"; startX: number; startY: number; endX: number; endY: number }
   | { type: "text"; x: number; y: number; value: string };
 
 export class Game {
@@ -56,9 +55,8 @@ export class Game {
     this.selectedTool = tool;
   }
 
-  // --- Initialize room and history ---
+  // --- Initialize room and load previous shapes ---
   async init() {
-    // Fetch room’s chat history (draws + deletes)
     const res = await axios.get(`${HTTP_BACKEND}/chats/${this.roomId}`);
     const { messages, roomName } = res.data;
 
@@ -77,17 +75,17 @@ export class Game {
 
     this.clearCanvas();
 
-    // Join WS room
     this.socket.send(
       JSON.stringify({
         type: "join_room",
         roomId: this.roomId,
       })
     );
-    return roomName
+
+    return roomName;
   }
 
-  // --- WebSocket message handling ---
+  // --- WebSocket Message Handling ---
   initSocketHandlers() {
     this.socket.onmessage = (event) => {
       const message = JSON.parse(event.data);
@@ -132,10 +130,13 @@ export class Game {
           ctx.textBaseline = "top";
           ctx.fillText(shape.value, shape.x, shape.y);
           break;
+        case "arrow":
+          this.drawArrow(shape.startX, shape.startY, shape.endX, shape.endY);
+          break;
       }
       ctx.closePath();
 
-      // Highlight selected shape when moving
+      // highlight selected shape
       if (i === this.selectedShapeIndex && this.isMoving) {
         ctx.save();
         ctx.strokeStyle = "orange";
@@ -147,17 +148,17 @@ export class Game {
           ctx.arc(shape.centerX, shape.centerY, shape.radius, 0, Math.PI * 2);
           ctx.stroke();
           ctx.closePath();
+        } else if (shape.type === "arrow") {
+          this.drawArrow(shape.startX, shape.startY, shape.endX, shape.endY);
         }
         ctx.restore();
       }
     });
   }
 
-  // --- Mouse + Move Handlers ---
+  // --- Mouse Handlers ---
   mouseDownHandler = (e: MouseEvent) => {
-    if (this.selectedTool === "move") return;
-    if (this.selectedTool === "text") return;
-
+    if (this.selectedTool === "move" || this.selectedTool === "text") return;
     this.clicked = true;
     const rect = this.canvas.getBoundingClientRect();
     this.startX = e.clientX - rect.left;
@@ -183,13 +184,15 @@ export class Game {
       } else if (shape.type === "text") {
         this.moveOffsetX = x - shape.x;
         this.moveOffsetY = y - shape.y;
+      } else if (shape.type === "arrow") {
+        this.moveOffsetX = x - shape.startX;
+        this.moveOffsetY = y - shape.startY;
       }
       this.isMoving = true;
     }
   };
 
   mouseUpHandler = (e: MouseEvent) => {
-    // --- End move ---
     if (this.selectedTool === "move" && this.isMoving && this.selectedShapeIndex !== null) {
       this.isMoving = false;
       const movedShape = this.existingShapes[this.selectedShapeIndex];
@@ -206,8 +209,6 @@ export class Game {
     }
 
     const rect = this.canvas.getBoundingClientRect();
-
-    // --- Handle text ---
     if (this.selectedTool === "text") {
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -234,6 +235,14 @@ export class Game {
         centerY: this.startY + radius,
         radius,
       };
+    } else if (this.selectedTool === "arrow") {
+      shape = {
+        type: "arrow",
+        startX: this.startX,
+        startY: this.startY,
+        endX,
+        endY,
+      };
     }
 
     if (!shape) return;
@@ -257,21 +266,32 @@ export class Game {
     // --- Moving shape ---
     if (this.selectedTool === "move" && this.isMoving && this.selectedShapeIndex !== null) {
       const shape = this.existingShapes[this.selectedShapeIndex];
+      const dx = x - this.moveOffsetX;
+      const dy = y - this.moveOffsetY;
+
       if (shape.type === "rect") {
-        shape.x = x - this.moveOffsetX;
-        shape.y = y - this.moveOffsetY;
+        shape.x = dx;
+        shape.y = dy;
       } else if (shape.type === "circle") {
-        shape.centerX = x - this.moveOffsetX;
-        shape.centerY = y - this.moveOffsetY;
+        shape.centerX = dx;
+        shape.centerY = dy;
       } else if (shape.type === "text") {
-        shape.x = x - this.moveOffsetX;
-        shape.y = y - this.moveOffsetY;
+        shape.x = dx;
+        shape.y = dy;
+      } else if (shape.type === "arrow") {
+        const offsetX = dx - shape.startX;
+        const offsetY = dy - shape.startY;
+        shape.startX += offsetX;
+        shape.startY += offsetY;
+        shape.endX += offsetX;
+        shape.endY += offsetY;
       }
+
       this.clearCanvas();
       return;
     }
 
-    // --- Live preview when drawing ---
+    // --- Drawing preview ---
     if (!this.clicked || this.selectedTool === "text") return;
     const endX = e.clientX - rect.left;
     const endY = e.clientY - rect.top;
@@ -290,6 +310,8 @@ export class Game {
       this.ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
       this.ctx.stroke();
       this.ctx.closePath();
+    } else if (this.selectedTool === "arrow") {
+      this.drawArrow(this.startX, this.startY, endX, endY);
     }
   };
 
@@ -334,7 +356,7 @@ export class Game {
     );
   }
 
-  // --- Shape detection & text ---
+  // --- Shape Detection ---
   private findShapeAt(x: number, y: number, buffer = 8): number | null {
     for (let i = this.existingShapes.length - 1; i >= 0; i--) {
       const s = this.existingShapes[i];
@@ -359,11 +381,24 @@ export class Game {
           y <= s.y + 20 + buffer
         )
           return i;
+      } else if (s.type === "arrow") {
+        const dist =
+          Math.abs(
+            (s.endY - s.startY) * x -
+              (s.endX - s.startX) * y +
+              s.endX * s.startY -
+              s.endY * s.startX
+          ) /
+          Math.sqrt(
+            Math.pow(s.endY - s.startY, 2) + Math.pow(s.endX - s.startX, 2)
+          );
+        if (dist <= buffer) return i;
       }
     }
     return null;
   }
 
+  // --- Text Input ---
   private addText(x: number, y: number) {
     const input = document.createElement("input");
     input.type = "text";
@@ -402,8 +437,35 @@ export class Game {
     input.addEventListener("blur", cleanup);
   }
 
-  // --- Shape equality (for delete) ---
   private isSameShape(a: Shape, b: Shape): boolean {
     return JSON.stringify(a) === JSON.stringify(b);
+  }
+
+  // --- Arrow Drawing ---
+  private drawArrow(fromX: number, fromY: number, toX: number, toY: number) {
+    const { ctx } = this;
+    const headLength = 10;
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx);
+
+    ctx.beginPath();
+    ctx.moveTo(fromX, fromY);
+    ctx.lineTo(toX, toY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(toX, toY);
+    ctx.lineTo(
+      toX - headLength * Math.cos(angle - Math.PI / 6),
+      toY - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.lineTo(
+      toX - headLength * Math.cos(angle + Math.PI / 6),
+      toY - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.lineTo(toX, toY);
+    ctx.fillStyle = this.darkMode ? "#ffffff" : "#000000";
+    ctx.fill();
   }
 }

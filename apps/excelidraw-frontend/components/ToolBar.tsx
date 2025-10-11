@@ -1,7 +1,7 @@
-import { Circle, Pencil, RectangleHorizontal, Type, Move, Trash2 } from "lucide-react";
+import { Circle, Pencil, RectangleHorizontal, Type, Move, Trash2, ArrowBigLeft, ArrowBigDownDash, ArrowBigUp } from "lucide-react";
 import IconButton from "./IconButton";
 
-export type Tool = "circle" | "rect" | "pencil" | "text" | "move"| "delete";
+export type Tool = "circle" | "rect" | "arrow" | "text" | "move"| "delete";
 
 export function Toolbar({
   selectedTool,
@@ -14,10 +14,10 @@ export function Toolbar({
     <div className="fixed top-5 left-5 z-30">
       <div className="flex flex-col gap-2">
         <IconButton
-          activated={selectedTool === "pencil"}
-          icon={<Pencil />}
-          onClick={() => setSelectedTool("pencil")}
-          title="Pencil"
+          activated={selectedTool === "arrow"}
+          icon={<ArrowBigUp />}
+          onClick={() => setSelectedTool("arrow")}
+          title="arrow"
         />
         <IconButton
           activated={selectedTool === "rect"}

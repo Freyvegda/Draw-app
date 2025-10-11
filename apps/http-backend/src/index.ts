@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import express from "express"
 import jwt from "jsonwebtoken"
 import { JWT_SECRET } from "@repo/backend-common/config";
@@ -67,7 +69,7 @@ app.post('/signin', async (req, res)=>{
         }
         const token= jwt.sign({
             userId : user?.id
-        }, JWT_SECRET!)
+        }, JWT_SECRET)
         res.json({msg: token})
     }
     catch(err){

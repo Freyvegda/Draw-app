@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { WebSocketServer, WebSocket } from "ws";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { JWT_SECRET } from "@repo/backend-common/config";
@@ -27,7 +29,7 @@ const users: User[] = [];
 // --- Helper: JWT Verification ---
 function checkUser(token: string): string | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET!) as JwtPayload & { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { userId: string };
     return decoded?.userId || null;
   } catch (err) {
     console.error("JWT verification failed:", err);
