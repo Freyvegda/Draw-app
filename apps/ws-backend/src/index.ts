@@ -52,7 +52,7 @@ wss.on("connection", (ws, request) => {
   const userId = checkUser(token);
 
   if (!userId) {
-    console.warn(" Unauthorized connection attempt");
+    console.warn("❌ Unauthorized connection attempt");
     ws.close();
     return;
   }
@@ -60,7 +60,7 @@ wss.on("connection", (ws, request) => {
   const user: User = { ws, rooms: [], userId };
   users.push(user);
 
-  console.log(`User connected: ${userId} (${users.length} total)`);
+  console.log(`✅ User connected: ${userId} (${users.length} total)`);
 
   // --- Handle incoming messages ---
   ws.on("message", async (rawData) => {
@@ -74,14 +74,14 @@ wss.on("connection", (ws, request) => {
         // --- JOIN ROOM ---
         case "join_room": {
           if (!user.rooms.includes(roomId)) user.rooms.push(roomId);
-          console.log(`User ${user.userId} joined room ${roomId}`);
+          console.log(`👤 User ${user.userId} joined room ${roomId}`);
           break;
         }
 
         // --- LEAVE ROOM ---
         case "leave_room": {
           user.rooms = user.rooms.filter((r) => r !== roomId);
-          console.log(`User ${user.userId} left room ${roomId}`);
+          console.log(`👋 User ${user.userId} left room ${roomId}`);
           break;
         }
 
@@ -94,14 +94,15 @@ wss.on("connection", (ws, request) => {
             data: { userId, roomId, message, type: "chat" },
           });
 
-          // Broadcast to all users in the same room
+          // Broadcast to all OTHER users in the same room (exclude sender)
           broadcastToRoom(roomId, {
             type: "chat",
             message,
             roomId,
             userId,
-          });
+          }, userId); // Pass userId to exclude sender
 
+          console.log(`💬 Shape created/moved by ${userId} in room ${roomId}`);
           break;
         }
 
@@ -114,38 +115,47 @@ wss.on("connection", (ws, request) => {
             data: { userId, roomId, message, type: "delete" },
           });
 
-          // Broadcast deletion event
+          // Broadcast deletion event to OTHER users (exclude sender)
           broadcastToRoom(roomId, {
             type: "delete",
             message,
             roomId,
             userId,
-          });
+          }, userId); // Pass userId to exclude sender
 
-          console.log(`Shape deleted by ${userId} in room ${roomId}`);
+          console.log(`🗑️  Shape deleted by ${userId} in room ${roomId}`);
           break;
         }
 
         default:
-          console.warn("Unknown message type:", type);
+          console.warn("⚠️  Unknown message type:", type);
       }
     } catch (err) {
-      console.error("Failed to handle message:", err);
+      console.error("❌ Failed to handle message:", err);
       ws.send(JSON.stringify({ type: "error", msg: "Invalid message format" }));
     }
   });
 
   // --- Handle disconnect ---
   ws.on("close", () => {
-    console.log(`User disconnected: ${userId}`);
+    console.log(`👋 User disconnected: ${userId}`);
     const index = users.findIndex((u) => u.ws === ws);
     if (index !== -1) users.splice(index, 1);
   });
 });
 
-// --- Helper: Broadcast to all users in a given room ---
-function broadcastToRoom(roomId: string, payload: Record<string, any>) {
+// --- Helper: Broadcast to all users in a given room (excluding sender) ---
+function broadcastToRoom(
+  roomId: string, 
+  payload: Record<string, any>, 
+  excludeUserId?: string
+) {
   users.forEach((u) => {
+    // Skip if this is the sender
+    if (excludeUserId && u.userId === excludeUserId) {
+      return;
+    }
+    
     if (u.rooms.includes(roomId) && u.ws.readyState === WebSocket.OPEN) {
       u.ws.send(JSON.stringify(payload));
     }

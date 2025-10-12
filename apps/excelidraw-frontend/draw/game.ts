@@ -24,6 +24,7 @@ export class Game {
   private isMoving = false;
   private moveOffsetX = 0;
   private moveOffsetY = 0;
+  private originalShapeBeforeMove: Shape | null = null; // Store original shape
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -175,6 +176,10 @@ export class Game {
     if (shapeIndex !== null) {
       this.selectedShapeIndex = shapeIndex;
       const shape = this.existingShapes[shapeIndex];
+      
+      // Store a deep copy of the original shape before moving
+      this.originalShapeBeforeMove = JSON.parse(JSON.stringify(shape));
+      
       if (shape.type === "rect") {
         this.moveOffsetX = x - shape.x;
         this.moveOffsetY = y - shape.y;
@@ -196,6 +201,19 @@ export class Game {
     if (this.selectedTool === "move" && this.isMoving && this.selectedShapeIndex !== null) {
       this.isMoving = false;
       const movedShape = this.existingShapes[this.selectedShapeIndex];
+      
+      // First delete the old position
+      if (this.originalShapeBeforeMove) {
+        this.socket.send(
+          JSON.stringify({
+            type: "delete",
+            message: JSON.stringify({ shape: this.originalShapeBeforeMove }),
+            roomId: this.roomId,
+          })
+        );
+      }
+      
+      // Then add the new position
       this.socket.send(
         JSON.stringify({
           type: "chat",
@@ -203,7 +221,9 @@ export class Game {
           roomId: this.roomId,
         })
       );
+      
       this.selectedShapeIndex = null;
+      this.originalShapeBeforeMove = null;
       this.clearCanvas();
       return;
     }
