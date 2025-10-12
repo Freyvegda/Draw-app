@@ -1,4 +1,4 @@
-import { Circle, Pencil, RectangleHorizontal, Type, Move, Trash2, ArrowBigLeft, ArrowBigDownDash, ArrowBigUp } from "lucide-react";
+import { Circle, RectangleHorizontal, Type, Move, Trash2, ArrowBigUp } from "lucide-react";
 import IconButton from "./IconButton";
 
 export type Tool = "circle" | "rect" | "arrow" | "text" | "move"| "delete";

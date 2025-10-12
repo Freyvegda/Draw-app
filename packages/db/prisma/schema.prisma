@@ -24,16 +24,31 @@ model Room {
   adminId     String
   admin       User      @relation(fields: [adminId], references: [id])
   chats       Chat[]
+
+  Shape Shape[]
 }
 
 model Chat {
   id        Int       @id @default(autoincrement())
   roomId    String
   userId    String
+  shapeId  String?   // optional, for messages related to shapes (like delete)
   message   String
   type      String    @default("chat") // "chat", "delete", etc.
   createdAt DateTime  @default(now())
 
   room      Room      @relation(fields: [roomId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
+}
+
+
+model Shape {
+  id        String   @id @default(uuid())
+  roomId    String
+  type      String   // "rect", "circle", "pencil"
+  data      Json     // contains {x, y, width, height, etc.}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  room      Room     @relation(fields: [roomId], references: [id])
 }

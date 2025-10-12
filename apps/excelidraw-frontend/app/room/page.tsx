@@ -117,9 +117,9 @@ export default function JoinRoomPage() {
 
  
   return (
-    <div className="min-h-screen bg-[#fdf6ee] flex items-center justify-center">
-      <div className="bg-white shadow-md rounded-2xl p-8 w-full max-w-md text-center">
-        <h1 className="text-3xl font-semibold mb-6">Join a Room</h1>
+    <div className="min-h-screen bg-orange-100 flex items-center justify-center">
+      <div className="bg-[#ffd9b3] shadow-md rounded-2xl p-8 w-full max-w-md text-center">
+        <h1 className="text-3xl font-bold mb-6">Join a Room</h1>
 
         {/* JOIN INPUT */}
         <input

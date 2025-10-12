@@ -61,9 +61,9 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdf6ee] relative">
-      <div className="w-full max-w-md px-6 py-8 bg-white shadow-lg rounded-2xl text-center">
-        <h1 className="text-3xl font-semibold mb-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-orange-100 relative">
+      <div className="w-full max-w-md px-6 py-8 bg-[#ffd9b3] shadow-lg rounded-2xl text-center">
+        <h1 className="text-3xl font-bold mb-6">
           {isSignIn ? "Sign In" : "Sign Up"}
         </h1>
 
@@ -74,7 +74,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
               placeholder="Full Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
+              className="border font-semibold border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
               required
             />
           )}
@@ -83,7 +83,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
+            className="border font-semibold border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
             required
           />
           <input
@@ -112,7 +112,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
 
         {error && <p className="text-red-500 mt-4 text-md">{error}</p>}
 
-        <div className="mt-6 text-gray-600">
+        <div className="mt-6 font-bold text-md text-gray-600">
           {isSignIn ? (
             <p>
               Don’t have an account?{" "}

@@ -71,7 +71,7 @@ export default function Canvas({
 
       socket.close();
 
-      router.push("/signin");
+      router.push("/");
     }
     catch(err){
       console.error("Error logging out", err);
@@ -86,7 +86,7 @@ export default function Canvas({
   return (
     <div
       className={`relative flex flex-col items-center h-screen w-screen overflow-hidden transition-colors duration-300 ${
-        darkMode ? "bg-black text-white" : "bg-[#fdf6ee] text-black"
+        darkMode ? "bg-black text-white" : "bg-[#ffd9b3] text-black"
       }`}
     >
       {/* Room title */}
