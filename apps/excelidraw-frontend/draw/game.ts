@@ -44,11 +44,10 @@ export class Game {
   }
 
   destroy() {
-    this.canvas.removeEventListener("mousedown", this.mouseDownHandler);
-    this.canvas.removeEventListener("mouseup", this.mouseUpHandler);
-    this.canvas.removeEventListener("mousemove", this.mouseMoveHandler);
-    this.canvas.removeEventListener("mousedown", this.mouseDownForMove);
-    this.canvas.removeEventListener("contextmenu", this.handleRightClick);
+    this.canvas.removeEventListener("pointerdown", this.pointerDownHandler);
+    this.canvas.removeEventListener("pointerup", this.pointerUpHandler);
+    this.canvas.removeEventListener("pointermove", this.pointerMoveHandler);
+    this.canvas.removeEventListener("pointerdown", this.pointerDownForMove);
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 
@@ -158,15 +157,28 @@ export class Game {
   }
 
   // --- Mouse Handlers ---
-  mouseDownHandler = (e: MouseEvent) => {
+  pointerDownHandler = (e: PointerEvent) => {
+    const rect = this.canvas.getBoundingClientRect();
+    
     if (this.selectedTool === "move" || this.selectedTool === "text") return;
     this.clicked = true;
-    const rect = this.canvas.getBoundingClientRect();
     this.startX = e.clientX - rect.left;
     this.startY = e.clientY - rect.top;
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // If delete tool is selected — delete on left click
+    if (this.selectedTool === "delete") {
+      const idx = this.findShapeAt(x, y);
+      if (idx !== null) {
+        this.deleteShape(idx);
+      }
+      return; // stop further logic
+    }
   };
 
-  mouseDownForMove = (e: MouseEvent) => {
+  pointerDownForMove = (e: PointerEvent) => {
     if (this.selectedTool !== "move") return;
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -197,7 +209,7 @@ export class Game {
     }
   };
 
-  mouseUpHandler = (e: MouseEvent) => {
+  pointerUpHandler = (e: PointerEvent) => {
     if (this.selectedTool === "move" && this.isMoving && this.selectedShapeIndex !== null) {
       this.isMoving = false;
       const movedShape = this.existingShapes[this.selectedShapeIndex];
@@ -278,7 +290,7 @@ export class Game {
     );
   };
 
-  mouseMoveHandler = (e: MouseEvent) => {
+  pointerMoveHandler = (e: PointerEvent) => {
     const rect = this.canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -337,11 +349,10 @@ export class Game {
 
   // --- Register events ---
   initMouseHandlers() {
-    this.canvas.addEventListener("mousedown", this.mouseDownHandler);
-    this.canvas.addEventListener("mouseup", this.mouseUpHandler);
-    this.canvas.addEventListener("mousemove", this.mouseMoveHandler);
-    this.canvas.addEventListener("mousedown", this.mouseDownForMove);
-    this.canvas.addEventListener("contextmenu", this.handleRightClick);
+    this.canvas.addEventListener("pointerdown", this.pointerDownHandler);
+    this.canvas.addEventListener("pointerup", this.pointerUpHandler);
+    this.canvas.addEventListener("pointermove", this.pointerMoveHandler);
+    this.canvas.addEventListener("pointerdown", this.pointerDownForMove);
     window.addEventListener("keydown", this.handleKeyDown);
   }
 
