@@ -1,6 +1,7 @@
 "use client";
 
 import { HTTP_BACKEND } from "@/config";
+import { Eye, EyeClosed } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,14 +88,25 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
             className="border font-semibold border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
             required
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="border border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
-            required
-          />
+          
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border font-semibold border-gray-300 rounded-xl p-3 pr-10 focus:ring-2 focus:ring-orange-400 outline-none"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
+            >
+              {showPassword ? <EyeClosed /> : <Eye />}
+            </button>
+          </div>
+
 
           <button
             type="submit"
@@ -139,3 +152,6 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
     </div>
   );
 }
+
+
+
