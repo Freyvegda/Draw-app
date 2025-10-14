@@ -21,9 +21,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
 
     try {
       const endpoint = isSignIn ? "signin" : "signup";
-      const body = isSignIn
-        ? { email, password }
-        : { email, password, name };
+      const body = isSignIn ? { email, password } : { email, password, name };
 
       const res = await fetch(`${HTTP_BACKEND}/${endpoint}`, {
         method: "POST",
@@ -41,7 +39,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
         // ✅ Save JWT token
         localStorage.setItem("token", data.msg);
       } else {
-        // After signup, immediately sign in the user to get the token
+        // ✅ Auto sign in after signup
         const signinRes = await fetch(`${HTTP_BACKEND}/signin`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -53,7 +51,6 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
 
       // ✅ Redirect to room page
       router.push("/room");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong");
@@ -80,6 +77,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
               required
             />
           )}
+
           <input
             type="email"
             placeholder="Email Address"
@@ -89,6 +87,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
             required
           />
 
+          {/* ✅ Password field with show/hide toggle */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -106,6 +105,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
               {showPassword ? <EyeClosed /> : <Eye />}
             </button>
           </div>
+
           <button
             type="submit"
             disabled={loading}
@@ -150,6 +150,3 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
     </div>
   );
 }
-
-
-
