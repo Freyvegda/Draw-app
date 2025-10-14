@@ -51,6 +51,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
 
       // ✅ Redirect to room page
       router.push("/room");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Something went wrong");
