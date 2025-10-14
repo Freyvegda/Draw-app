@@ -88,7 +88,7 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
             className="border font-semibold border-gray-300 rounded-xl p-3 focus:ring-2 focus:ring-orange-400 outline-none"
             required
           />
-          
+
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -106,8 +106,6 @@ export function AuthPage({ isSignIn }: { isSignIn: boolean }) {
               {showPassword ? <EyeClosed /> : <Eye />}
             </button>
           </div>
-
-
           <button
             type="submit"
             disabled={loading}
